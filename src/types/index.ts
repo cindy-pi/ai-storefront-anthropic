@@ -28,6 +28,8 @@ export interface Order {
   items: CartItem[]
   total: number
   date: string
+  recipientName: string
+  deliveryAddress: string
 }
 
 export interface Customer {
