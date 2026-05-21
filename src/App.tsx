@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Layout } from './components/Layout'
 import { HomePage } from './components/HomePage'
+import { CatalogPage } from './pages/CatalogPage'
 import { CartPage } from './pages/CartPage'
 import { CheckoutPage } from './pages/CheckoutPage'
 import { OrderConfirmationPage } from './pages/OrderConfirmationPage'
@@ -47,6 +48,17 @@ function App() {
     setCartItems(cartItems.filter(item => item.wandId !== wandId))
   }
 
+  const handleAddToCart = (wandId: string, quantity: number) => {
+    const existing = cartItems.find(item => item.wandId === wandId)
+    if (existing) {
+      setCartItems(cartItems.map(item =>
+        item.wandId === wandId ? { ...item, quantity: item.quantity + quantity } : item
+      ))
+    } else {
+      setCartItems([...cartItems, { wandId, quantity }])
+    }
+  }
+
   const handlePurchase = (deliveryAddress: string, recipientName: string) => {
     const total = cartItems.reduce((sum, cartItem) => {
       const wand = wands.find(w => w.id === cartItem.wandId)
@@ -80,11 +92,9 @@ function App() {
 
       case 'catalog':
         return (
-          <PlaceholderPage
-            icon="📚"
-            title="Wand Catalog"
-            message="The catalog is being assembled by our enchanters. Coming soon."
-            onBack={() => handleNavigate('home')}
+          <CatalogPage
+            cartItems={cartItems}
+            onAddToCart={handleAddToCart}
           />
         )
 
@@ -138,59 +148,5 @@ function App() {
   )
 }
 
-// Temporary placeholder for catalog (issue #4 feature not yet implemented)
-interface PlaceholderPageProps {
-  icon: string
-  title: string
-  message: string
-  onBack: () => void
-}
-
-function PlaceholderPage({ icon, title, message, onBack }: PlaceholderPageProps) {
-  return (
-    <div className="placeholder-page container">
-      <div className="placeholder-page__card card animate-fade-in">
-        <div className="placeholder-page__icon" aria-hidden="true">{icon}</div>
-        <h1 className="placeholder-page__title">{title}</h1>
-        <p className="placeholder-page__msg">{message}</p>
-        <button className="btn btn-secondary" onClick={onBack}>
-          ← Return
-        </button>
-      </div>
-
-      <style>{`
-        .placeholder-page {
-          padding: var(--space-3xl) var(--space-lg);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          min-height: 60vh;
-        }
-        .placeholder-page__card {
-          padding: var(--space-3xl) var(--space-2xl);
-          text-align: center;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: var(--space-lg);
-          max-width: 480px;
-          width: 100%;
-        }
-        .placeholder-page__icon {
-          font-size: 4rem;
-          animation: floatGlow 3s ease-in-out infinite;
-          filter: drop-shadow(0 0 12px rgba(212,175,55,0.4));
-        }
-        .placeholder-page__title {
-          font-size: 1.8rem;
-        }
-        .placeholder-page__msg {
-          color: var(--color-text-muted);
-          line-height: 1.7;
-        }
-      `}</style>
-    </div>
-  )
-}
 
 export default App
