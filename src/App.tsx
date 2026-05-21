@@ -1,25 +1,78 @@
 import { useState } from 'react'
 import { Layout } from './components/Layout'
 import { HomePage } from './components/HomePage'
+import { CartPage } from './pages/CartPage'
+import { CheckoutPage } from './pages/CheckoutPage'
+import { OrderConfirmationPage } from './pages/OrderConfirmationPage'
 import { useLocalStorage } from './hooks/useLocalStorage'
 import { CartItem, Order, Page } from './types'
+import { wands } from './store/wands'
 import './styles/global.css'
 
 const STARTING_BALANCE = 1000
+
+function generateOrderId(): string {
+  // UUID-style random string
+  return 'xxxx-xxxx-xxxx'.replace(/x/g, () =>
+    Math.floor(Math.random() * 16).toString(16)
+  ) + '-' + Date.now().toString(36)
+}
 
 function App() {
   const [currentPage, setCurrentPage] = useState<Page>('home')
   const [cartItems, setCartItems] = useLocalStorage<CartItem[]>('fizban-cart', [])
   const [balance, setBalance] = useLocalStorage<number>('fizban-balance', STARTING_BALANCE)
   const [orders, setOrders] = useLocalStorage<Order[]>('fizban-orders', [])
+  const [lastOrder, setLastOrder] = useState<Order | null>(null)
 
-  // Expose setters for child pages (catalog, cart, checkout will use these)
   const handleNavigate = (page: Page) => {
     setCurrentPage(page)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  // Placeholder renderers for pages not yet built (issues #4 and #5)
+  const handleUpdateQuantity = (wandId: string, quantity: number) => {
+    if (quantity <= 0) {
+      setCartItems(cartItems.filter(item => item.wandId !== wandId))
+      return
+    }
+    const existing = cartItems.find(item => item.wandId === wandId)
+    if (existing) {
+      setCartItems(cartItems.map(item =>
+        item.wandId === wandId ? { ...item, quantity } : item
+      ))
+    }
+  }
+
+  const handleRemoveItem = (wandId: string) => {
+    setCartItems(cartItems.filter(item => item.wandId !== wandId))
+  }
+
+  const handlePurchase = (deliveryAddress: string, recipientName: string) => {
+    const total = cartItems.reduce((sum, cartItem) => {
+      const wand = wands.find(w => w.id === cartItem.wandId)
+      return sum + (wand ? wand.price * cartItem.quantity : 0)
+    }, 0)
+
+    // Belt-and-suspenders: do not proceed if balance is insufficient
+    if (total > balance) return
+
+    const newBalance = Math.max(0, balance - total)
+    const order: Order = {
+      id: generateOrderId(),
+      items: [...cartItems],
+      total,
+      date: new Date().toISOString(),
+      recipientName,
+      deliveryAddress,
+    }
+
+    setBalance(newBalance)
+    setOrders([...orders, order])
+    setLastOrder(order)
+    setCartItems([])
+    handleNavigate('confirmation')
+  }
+
   const renderPage = () => {
     switch (currentPage) {
       case 'home':
@@ -30,38 +83,41 @@ function App() {
           <PlaceholderPage
             icon="📚"
             title="Wand Catalog"
-            message="The catalog is being assembled by our enchanters. Coming in issue #4."
+            message="The catalog is being assembled by our enchanters. Coming soon."
             onBack={() => handleNavigate('home')}
           />
         )
 
       case 'cart':
         return (
-          <PlaceholderPage
-            icon="🛒"
-            title="Shopping Cart"
-            message="The cart enchantment is being woven. Coming in issue #5."
-            onBack={() => handleNavigate('home')}
+          <CartPage
+            cartItems={cartItems}
+            balance={balance}
+            onUpdateQuantity={handleUpdateQuantity}
+            onRemoveItem={handleRemoveItem}
+            onNavigate={handleNavigate}
           />
         )
 
       case 'checkout':
         return (
-          <PlaceholderPage
-            icon="💰"
-            title="Checkout"
-            message="The checkout ritual is being prepared. Coming in issue #5."
-            onBack={() => handleNavigate('cart')}
+          <CheckoutPage
+            cartItems={cartItems}
+            balance={balance}
+            onPurchase={handlePurchase}
+            onNavigate={handleNavigate}
           />
         )
 
       case 'confirmation':
+        if (!lastOrder) {
+          return <HomePage onNavigate={handleNavigate} />
+        }
         return (
-          <PlaceholderPage
-            icon="📜"
-            title="Order Confirmation"
-            message="Your magical delivery receipt is being inscribed. Coming in issue #5."
-            onBack={() => handleNavigate('home')}
+          <OrderConfirmationPage
+            currentOrder={lastOrder}
+            pastOrders={orders}
+            onNavigate={handleNavigate}
           />
         )
 
@@ -69,12 +125,6 @@ function App() {
         return <HomePage onNavigate={handleNavigate} />
     }
   }
-
-  // Suppress unused variable warnings for state used by future issues
-  void orders
-  void setOrders
-  void setBalance
-  void setCartItems
 
   return (
     <Layout
@@ -88,7 +138,7 @@ function App() {
   )
 }
 
-// Temporary placeholder until issues #4 and #5 implement those pages
+// Temporary placeholder for catalog (issue #4 feature not yet implemented)
 interface PlaceholderPageProps {
   icon: string
   title: string
