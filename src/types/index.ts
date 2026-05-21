@@ -1,30 +1,38 @@
 export type Alignment = 'Good' | 'Neutral' | 'Evil'
 
+export type Rarity = 'Common' | 'Uncommon' | 'Rare' | 'Very Rare' | 'Legendary'
+
 export interface Wand {
   id: string
   name: string
   alignment: Alignment
-  wood: string
-  core: string
-  length: number // inches
-  flexibility: string
-  price: number // gold pieces
   description: string
+  price: number
+  magicalProperties: string[]
+  rarity: Rarity
   imageUrl: string
-  effect: string
+  specialEffect: string
 }
 
 export interface CartItem {
-  wand: Wand
+  wandId: string
   quantity: number
+}
+
+export interface Cart {
+  items: CartItem[]
 }
 
 export interface Order {
   id: string
-  date: string
   items: CartItem[]
   total: number
-  balanceAfter: number
+  date: string
+}
+
+export interface Customer {
+  goldBalance: number
+  purchaseHistory: Order[]
 }
 
 export type Page = 'home' | 'catalog' | 'cart' | 'checkout' | 'confirmation'
